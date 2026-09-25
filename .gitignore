@@ -1,0 +1,17 @@
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+.phpunit.cache
+docker-compose.override.yml
+user.ini
+
+# Evitar que se suban los logs pero mantener la carpeta
+/storage/logs/*
+!.gitignore
+*.sql
