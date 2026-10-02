@@ -97,6 +97,39 @@ class MoviesPagesTest extends TestCase
             ->assertSee('Add to favorites');
     }
 
+    public function test_movie_page_fetches_the_trailer_by_tmdb_id_even_without_imdb_id(): void
+    {
+        // fake propio: el comodín '*' del setUp ganaría a estos stubs
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::fake([
+            '*/movie/999/videos*' => Http::response(['results' => [['key' => 'abc123', 'name' => 'Trailer']]]),
+            '*/movie/999?*' => Http::response([
+                'id' => 999,
+                'imdb_id' => null,
+                'title' => 'Upcoming Movie',
+                'genres' => [],
+            ]),
+            '*' => Http::response(['results' => [], 'cast' => [], 'genres' => []]),
+        ]);
+
+        $this->get(route('movies.show', 999))
+            ->assertOk()
+            ->assertSee('youtube.com/embed/abc123', false);
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/movie//videos'));
+    }
+
+    public function test_movie_page_returns_404_when_tmdb_does_not_know_the_movie(): void
+    {
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::fake([
+            '*/movie/12345678?*' => Http::response(['success' => false, 'status_code' => 34], 404),
+            '*' => Http::response(['results' => [], 'cast' => [], 'genres' => []]),
+        ]);
+
+        $this->get(route('movies.show', 12345678))->assertNotFound();
+    }
+
     public function test_actor_page_renders_for_guests(): void
     {
         $this->get(route('actors.show', 287))

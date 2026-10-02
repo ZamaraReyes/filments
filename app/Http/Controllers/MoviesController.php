@@ -73,9 +73,9 @@ class MoviesController extends Controller
         // número de peticiones a TMDB aumentaba en progresión cuadrática en vez
         // de lineal con el número de películas del slider.
         $videoRequests = collect($movieSlider)
-            ->filter(fn ($movie) => ! empty($movie['imdb_id']))
+            ->filter(fn ($movie) => ! empty($movie['id']))
             ->mapWithKeys(fn ($movie) => [
-                $movie['id'] => ['/movie/'.$movie['imdb_id'].'/videos', ['language' => 'en-US']],
+                $movie['id'] => ['/movie/'.$movie['id'].'/videos', ['language' => 'en-US']],
             ])->all();
 
         $moviesTrailer = collect(Tmdb::getMany($videoRequests))
@@ -135,10 +135,14 @@ class MoviesController extends Controller
     public function show($id)
     {
         $movie = Tmdb::get('/movie/'.$id, 'language=en-US');
+        // id inexistente en TMDB (o TMDB caído): 404 en vez de un 500 más abajo
+        abort_unless(isset($movie['id']), 404);
 
-        $movieDetails = Omdb::find($movie['imdb_id']);
+        $movieDetails = Omdb::find($movie['imdb_id'] ?? null);
 
-        $movieTrailer = Tmdb::get('/movie/'.$movie['imdb_id'].'/videos')['results'][0] ?? [];
+        // Con el id de TMDB, no el de IMDb: muchas películas (sobre todo las
+        // próximas) no tienen imdb_id y la ruta quedaba "/movie//videos" (404).
+        $movieTrailer = Tmdb::get('/movie/'.$id.'/videos')['results'][0] ?? [];
 
         $movieCredits = Tmdb::get('/movie/'.$id.'/credits')['cast'] ?? [];
         
